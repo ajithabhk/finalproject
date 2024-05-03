@@ -10,8 +10,8 @@ from keras.models import load_model
 violence_model = load_model('modelnew.h5')
 
 # Telegram Bot token and chat ID
-TELEGRAM_BOT_TOKEN = '6549703008:AAGAC1nKsf4jrj4w-opTZeoc66JaHB-nGiY'
-TELEGRAM_CHAT_ID = '-1002002290095'
+TELEGRAM_BOT_TOKEN = ''
+TELEGRAM_CHAT_ID = ''
 
 # Initialize Telegram Bot
 bot = telepot.Bot(token=TELEGRAM_BOT_TOKEN)
