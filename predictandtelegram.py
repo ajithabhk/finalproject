@@ -10,14 +10,14 @@ from keras.models import load_model
 violence_model = load_model('modelnew.h5')
 
 # Telegram Bot token and chat ID
-TELEGRAM_BOT_TOKEN = ''
-TELEGRAM_CHAT_ID = ''
+TELEGRAM_BOT_TOKEN = []
+TELEGRAM_CHAT_ID = []
 
 # Initialize Telegram Bot
 bot = telepot.Bot(token=TELEGRAM_BOT_TOKEN)
 
 # Load YOLO model for handgun detection
-handgun_model = YOLO('runs/detect/train5/weights/best.pt')
+model = YOLO('runs/detect/train5/weights/best.pt')
 
 
 
@@ -44,9 +44,9 @@ def detect_violence(frame):
 
     # Perform violence detection
     preds = violence_model.predict(frame)
-
+    print(f"preds_violence ={preds}")
     # Return True if violence is detected, False otherwise
-    return preds[0][0] > 0.5
+    return preds[0][0] > 0.6
 
 
 # Capture video from laptop camera
@@ -58,24 +58,30 @@ while True:
         break
 
     # Perform handgun detection
-    handgun_results = handgun_model(frame)
 
-    # Check if handgun detection results are not empty
-    if handgun_results:
-        # Process handgun detection results and send alerts
-        for det in handgun_results:
-            if len(det) >= 6:  # Check if det contains at least 6 elements
-                x1, y1, x2, y2, conf, class_id = det[:6]  # Extract first 6 elements
-                if conf > 0.5:  # Set confidence threshold
-                    # Send Telegram alert for weapon detected
-                    time_now = get_current_time()
-                    location = get_location()
-                    weapon_message = f"🚨 Weapon Detected! 🚨\n\nLocation: {location}\nTimestamp: {time_now}"
-                    bot.sendMessage(chat_id=TELEGRAM_CHAT_ID, text=weapon_message)
-                    # Optionally, you can send the frame as well
-                    cv2.imwrite("weapon_alert_frame.jpg", frame)
-                    bot.sendPhoto(chat_id=TELEGRAM_CHAT_ID, photo=open('weapon_alert_frame.jpg', 'rb'))
-                    break  # Break out of loop after sending one alert for each detected weapon
+    results=model(frame)
+
+    boxes = results[0].boxes  # Extract bounding boxes
+    if boxes is not None:
+        for det in boxes:
+            x1, y1, x2, y2 = det.xyxy[0].cpu().numpy().tolist()
+
+            conf = det.conf[0].item()
+
+            class_id = det.cls[0].item()
+
+            if conf > 0.5:  # Set confidence threshold
+                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                cv2.putText(frame, model.names[int(class_id)], (int(x1), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
+                            (0, 255, 0), 2)
+                time_now = get_current_time()
+                location = get_location()
+                message = f"🚨 Weapon Detected! 🚨\n\nLocation: {location}\nTimestamp: {time_now}"
+                bot.sendMessage(chat_id=TELEGRAM_CHAT_ID, text=message)
+                # Optionally, you can send the frame as well
+                cv2.imwrite("weapon_alert_frame.jpg", frame)
+                bot.sendPhoto(chat_id=TELEGRAM_CHAT_ID, photo=open('weapon_alert_frame.jpg', 'rb'))
+                break
 
 
 
